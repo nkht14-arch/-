@@ -1,0 +1,20 @@
+{
+  "name": "care-minutes",
+  "version": "1.0.0",
+  "description": "録音データから医療・介護に特化した議事録を作成するWebアプリ",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --test test/*.test.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^1.14.0",
+    "dompurify": "^3.2.6",
+    "express": "^5.1.0",
+    "marked": "^15.0.12"
+  }
+}

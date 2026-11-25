@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ケア議事録</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path fill="currentColor" d="M10 3h4v7h7v4h-7v7h-4v-7H3v-4h7z"/></svg>
+      <span>ケア議事録</span>
+    </div>
+    <div class="engine" id="engine">接続確認中…</div>
+  </header>
+
+  <main class="layout">
+    <!-- STEP 1 -->
+    <section class="card" id="step-audio">
+      <h2><span class="num">1</span>録音データ</h2>
+      <div class="dropzone" id="dropzone" tabindex="0">
+        <p><strong>音声ファイルをドロップ</strong>、またはクリックして選択</p>
+        <p class="hint">mp3 / m4a / wav / webm / ogg など。音声はこの端末の中で文字起こしされ、外部に送信されません。</p>
+        <input type="file" id="fileInput" accept="audio/*,video/*" hidden />
+      </div>
+      <div class="row">
+        <button class="btn" id="recBtn" type="button">● その場で録音</button>
+        <span id="recTimer" class="muted"></span>
+      </div>
+      <audio id="player" controls hidden></audio>
+      <div class="row wrap">
+        <label>認識モデル
+          <select id="modelSelect">
+            <option value="Xenova/whisper-base">標準（base・約80MB・速い）</option>
+            <option value="Xenova/whisper-small" selected>高精度（small・約250MB）</option>
+            <option value="onnx-community/whisper-large-v3-turbo">最高精度（large-v3-turbo・WebGPU推奨）</option>
+          </select>
+        </label>
+        <button class="btn primary" id="transcribeBtn" type="button" disabled>文字起こしを開始</button>
+      </div>
+      <div class="progress" id="progressWrap" hidden>
+        <div class="bar"><div id="progressBar"></div></div>
+        <span id="progressText" class="muted"></span>
+      </div>
+    </section>
+
+    <!-- STEP 2 -->
+    <section class="card" id="step-transcript">
+      <h2><span class="num">2</span>文字起こし</h2>
+      <p class="hint">内容を直接編集できます。既存の文字起こしテキストを貼り付けても使えます。</p>
+      <textarea id="transcript" rows="12" placeholder="[00:00] 本日はサービス担当者会議を始めます…"></textarea>
+      <div class="row wrap">
+        <button class="btn" id="glossaryBtn" type="button">医療・介護用語を補正</button>
+        <span id="glossaryResult" class="muted"></span>
+        <span class="spacer"></span>
+        <span id="charCount" class="muted">0 文字</span>
+      </div>
+      <details>
+        <summary>ユーザー辞書（施設名・薬剤名・地域の事業所名など）</summary>
+        <p class="hint">1行に「誤変換,正しい表記」。この端末のブラウザにだけ保存されます。</p>
+        <textarea id="userGlossary" rows="5" placeholder="あおぞらでい,あおぞらデイサービス&#10;あむろじぴん,アムロジピン"></textarea>
+      </details>
+    </section>
+
+    <!-- STEP 3 -->
+    <section class="card" id="step-meta">
+      <h2><span class="num">3</span>会議情報</h2>
+      <label class="block">議事録の種類
+        <select id="templateSelect"></select>
+      </label>
+      <p class="hint" id="templateDesc"></p>
+      <div class="grid2">
+        <label class="block">開催日時<input id="mDatetime" type="text" placeholder="2026年11月25日 14:00〜14:45" /></label>
+        <label class="block">場所<input id="mPlace" type="text" placeholder="利用者宅／○○病院 3階カンファレンス室" /></label>
+        <label class="block">対象者（利用者・患者）<input id="mSubject" type="text" placeholder="A様（要介護2）" /></label>
+        <label class="block">記録者<input id="mRecorder" type="text" placeholder="ケアマネジャー 佐藤" /></label>
+      </div>
+      <label class="block">出席者（所属・職種・氏名）
+        <textarea id="mAttendees" rows="3" placeholder="本人、長女、主治医（○○クリニック）、訪問看護師、福祉用具専門相談員、ケアマネジャー"></textarea>
+      </label>
+      <label class="block">追加の指示（任意）
+        <input id="extra" type="text" placeholder="例：福祉用具の変更点を詳しく／家族の発言を重点的に" />
+      </label>
+      <fieldset class="privacy">
+        <legend>個人情報の保護</legend>
+        <label class="check"><input type="checkbox" id="maskToggle" checked /> 送信前に氏名・電話番号などをマスキングする</label>
+        <label class="block">マスキングする氏名（読点・スペース区切り）
+          <input id="maskNames" type="text" placeholder="山田花子、山田、花子" />
+        </label>
+      </fieldset>
+      <div class="row wrap">
+        <button class="btn primary" id="generateBtn" type="button">議事録を作成</button>
+        <button class="btn" id="stopBtn" type="button" hidden>中止</button>
+        <span id="genStatus" class="muted"></span>
+      </div>
+    </section>
+
+    <!-- STEP 4 -->
+    <section class="card wide" id="step-output">
+      <div class="out-head">
+        <h2><span class="num">4</span>議事録</h2>
+        <div class="tabs" role="tablist">
+          <button role="tab" class="tab active" data-view="preview" type="button">プレビュー</button>
+          <button role="tab" class="tab" data-view="edit" type="button">編集</button>
+        </div>
+      </div>
+      <div id="preview" class="minutes empty">ここに議事録が表示されます。</div>
+      <textarea id="editor" rows="24" hidden></textarea>
+      <div class="row wrap">
+        <button class="btn" id="copyBtn" type="button">コピー</button>
+        <button class="btn" id="mdBtn" type="button">Markdown保存</button>
+        <button class="btn" id="docBtn" type="button">Word形式で保存</button>
+        <button class="btn" id="printBtn" type="button">印刷／PDF</button>
+      </div>
+      <p class="hint">AIが作成した下書きです。【要確認】の箇所を中心に、記録者が必ず内容を確認してから保存・共有してください。</p>
+    </section>
+  </main>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <script src="vendor/marked.js"></script>
+  <script src="vendor/purify.js"></script>
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
